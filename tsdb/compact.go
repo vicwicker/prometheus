@@ -271,9 +271,9 @@ func (c *LeveledCompactor) plan(dms []dirMeta) ([]string, error) {
 		}
 	})
 
-	res := c.selectOverlappingDirs(dms)
-	if len(res) > 0 {
-		return res, nil
+	overlappingDirs := c.selectOverlappingDirs(dms)
+	if len(overlappingDirs) > 0 {
+		return overlappingDirs, nil
 	}
 	// No overlapping blocks, do compaction the usual way.
 	// We do not include a recently created block with max(minTime), so the block which was just created from WAL.
@@ -281,10 +281,10 @@ func (c *LeveledCompactor) plan(dms []dirMeta) ([]string, error) {
 	dms = dms[:len(dms)-1]
 
 	for _, dm := range c.selectDirs(dms) {
-		res = append(res, dm.dir)
+		overlappingDirs = append(overlappingDirs, dm.dir)
 	}
-	if len(res) > 0 {
-		return res, nil
+	if len(overlappingDirs) > 0 {
+		return overlappingDirs, nil
 	}
 
 	// Compact any blocks with big enough time range that have >5% tombstones.
