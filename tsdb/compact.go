@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"os"
 	"path/filepath"
 	"slices"
@@ -273,7 +274,24 @@ func (c *LeveledCompactor) plan(dms []dirMeta) ([]string, error) {
 
 	overlappingDirs := c.selectOverlappingDirs(dms)
 	if len(overlappingDirs) > 0 {
-		return overlappingDirs, nil
+		maxBlockDuration := c.ranges[len(c.ranges)-1]
+		var minTime int64 = math.MaxInt64
+		for _, dm := range dms {
+			if dm.meta.MaxTime-dm.meta.MinTime < maxBlockDuration && dm.meta.MinTime < minTime {
+				minTime = dm.meta.MinTime
+			}
+		}
+
+		var res []string
+		for _, dm := range dms {
+			if dm.meta.MinTime <= minTime+maxBlockDuration {
+				res = append(res, dm.dir)
+			} else {
+				// TODO: Check if we can break here since dm should be ordered by MinTime
+			}
+		}
+
+		return res, nil
 	}
 	// No overlapping blocks, do compaction the usual way.
 	// We do not include a recently created block with max(minTime), so the block which was just created from WAL.
