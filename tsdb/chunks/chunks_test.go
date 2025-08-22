@@ -176,23 +176,11 @@ func TestWriterSegmentFileSize(t *testing.T) {
 	require.NoError(t, err)
 	actualSegmentFileSize := segmentInfo.Size()
 
-	// Now, use the actual segment file size as the limit: chunks split due to overestimation.
+	// Now, use the actual segment file size as the limit: both chunks still fit.
 	dir2 := t.TempDir()
 	require.NoError(t, writeChunksWithSegmentSize(dir2, actualSegmentFileSize))
 
 	files2, err := os.ReadDir(dir2)
 	require.NoError(t, err)
-	require.Len(t, files2, 2, "bug: there are 2 segment files instead of 1")
-
-	// The estimation error occurs because WriteChunks always assumes MaxChunkLengthFieldSize (5 bytes)
-	// for the chunk length field, but in this test, each chunk only needs 1 byte for the length field.
-	estimationError := 2 * (MaxChunkLengthFieldSize - 1)
-
-	// Finally, use the actual segment file size + estimation error as the limit: both chunks fit again.
-	dir3 := t.TempDir()
-	require.NoError(t, writeChunksWithSegmentSize(dir3, actualSegmentFileSize+int64(estimationError)))
-
-	files3, err := os.ReadDir(dir3)
-	require.NoError(t, err)
-	require.Len(t, files3, 1, "the Writer creates a single segment file if the segment size limit is %d bytes larger than necessary", estimationError)
+	require.Len(t, files2, 1, "one segment file should contain both chunks")
 }
